@@ -1,6 +1,4 @@
-# bluetoothStableScanner
-
-Bluetooth Stable Scanner
+# Bluetooth Stable Scanner
 ==================
 
 This Python script scans for nearby Bluetooth devices for a specified duration and generates a PDF report with the details of the detected devices.
