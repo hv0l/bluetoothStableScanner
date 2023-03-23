@@ -1,63 +1,65 @@
 import sys
-import time
 import argparse
-from datetime import timedelta
-from collections import defaultdict
-
-import bluetooth
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-
-def scan(duration):
-    end_time = time.time() + duration
-    devices = defaultdict(lambda: {'count': 0, 'rssi': []})
-
-    while time.time() < end_time:
-        nearby_devices = bluetooth.discover_devices(duration=8, lookup_names=True, lookup_class=True, device_id=-1, flush_cache=True)
-
-        for addr, name, _ in nearby_devices:
-            devices[addr]['name'] = name
-            devices[addr]['count'] += 1
-
-        time.sleep(1)
-
-    return devices
-
-def generate_pdf_report(devices, output_file):
-    doc = SimpleDocTemplate(output_file, pagesize=letter)
-    styles = getSampleStyleSheet()
-    story = []
-
-    for addr, device_info in devices.items():
-        story.append(Paragraph(f"Device Address: {addr}", styles["Heading2"]))
-        story.append(Paragraph(f"Device Name: {device_info['name']}", styles["BodyText"]))
-        story.append(Paragraph(f"Times Detected: {device_info['count']}", styles["BodyText"]))
-        story.append(Spacer(1, 12))
-
-    doc.build(story)
+import time
+import datetime
+from bluetooth import discover_devices
+from fpdf import FPDF
 
 def parse_duration(duration_str):
-    if duration_str[-1] == "h":
-        return int(duration_str[:-1]) * 3600
-    elif duration_str[-1] == "m":
-        return int(duration_str[:-1]) * 60
-    elif duration_str[-1] == "s":
-        return int(duration_str[:-1])
+    value = int(duration_str[:-1])
+    unit = duration_str[-1]
+
+    if unit == 's':
+        return value
+    elif unit == 'm':
+        return value * 60
+    elif unit == 'h':
+        return value * 3600
     else:
-        raise ValueError("Invalid duration format.")
+        raise ValueError("Invalid duration format")
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("duration", help="Duration for scanning. Format: Nh, Nm or Ns (N is an integer)")
-    parser.add_argument("-o", "--output", help="Output PDF file name", default="output.pdf")
-    args = parser.parse_args()
+parser = argparse.ArgumentParser(description='Scan Bluetooth devices and generate a PDF report.')
+parser.add_argument('-d', '--duration', required=True, help="Duration of the scan (e.g., '1m', '3h')")
+parser.add_argument('-o', '--output', required=True, help='Output PDF file')
+args = parser.parse_args()
 
-    try:
-        duration = parse_duration(args.duration)
-    except ValueError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
+duration = parse_duration(args.duration)
+start_time = time.time()
+devices = {}
 
-    devices = scan(duration)
-    generate_pdf_report(devices, args.output)
+try:
+    while time.time() - start_time < duration:
+        nearby_devices = discover_devices(lookup_names=True)
+        for address, name in nearby_devices:
+            now = datetime.datetime.now()
+            print(f"Found device: {name} ({address}) at {now}")
+
+            if address not in devices:
+                devices[address] = {'name': name, 'seen': [(now, now)]}
+            else:
+                last_seen = devices[address]['seen'][-1][1]
+                if (now - last_seen).total_seconds() > 60:
+                    devices[address]['seen'].append((now, now))
+                else:
+                    devices[address]['seen'][-1] = (devices[address]['seen'][-1][0], now)
+
+        time.sleep(5)
+except KeyboardInterrupt:
+    pass
+
+pdf = FPDF()
+pdf.add_page()
+pdf.set_font("Arial", size=12)
+
+pdf.cell(200, 10, txt="Bluetooth Devices Report", ln=1, align="C")
+
+for address, device_info in devices.items():
+    pdf.cell(0, 10, txt=f"Device Name: {device_info['name']}", ln=1)
+    pdf.cell(0, 10, txt=f"MAC Address: {address}", ln=1)
+
+    for start, end in device_info['seen']:
+        pdf.cell(0, 10, txt=f"Online from {start} to {end}", ln=1)
+
+    pdf.cell(0, 10, txt="", ln=1)
+
+pdf.output(args.output)
