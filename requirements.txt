@@ -1,0 +1,2 @@
+PyBluez==0.23
+reportlab==3.5.68
