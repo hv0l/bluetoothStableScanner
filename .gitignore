@@ -1,0 +1,22 @@
+# .gitignore
+
+# Ignora i file temporanei e di backup
+*~
+*.bak
+*.swp
+*.tmp
+
+# Ignora i file di configurazione locali e di sistema operativo
+*.pyc
+*.pyo
+__pycache__/
+*.pyd
+*.egg-info/
+*.egg
+*.log
+
+# Ignora il file PDF di output generato dallo script
+*.pdf
+
+# Ignora i file di ambiente virtuale
+venv/
