@@ -35,4 +35,6 @@ Run a scan for 15 minutes and save the report to the file "output.pdf":
 
 Run a scan for 30 seconds and save the report to the file "short_scan.pdf":
 
-`python3 bt_scanner.py 30s -o short_scan.pdf`
+`python3 btscanner.py 30s -o short_scan.pdf`
+
+![report](https://user-images.githubusercontent.com/61795418/227164633-375e3cc0-d458-4da7-bf2c-5d42dcea35fb.png)
